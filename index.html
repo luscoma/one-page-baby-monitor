@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1117">
+<meta name="description" content="Turn two phones into a Wi-Fi baby monitor. Runs entirely in the browser.">
+<title>Baby Monitor</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128118;</text></svg>">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ─────────────────────────  LANDING  ───────────────────────── -->
+  <section id="view-landing" class="view">
+    <div class="hero">
+      <div class="hero-icon">👶</div>
+      <h1>Baby Monitor</h1>
+      <p class="sub">Two phones, one Wi-Fi network. Audio streams straight from one to the other.</p>
+    </div>
+
+    <div class="stack">
+      <button id="btnBeMonitor" class="btn btn-primary btn-big">
+        <span class="btn-title">Start Monitoring</span>
+        <span class="btn-note">Leave this phone with the baby</span>
+      </button>
+      <button id="btnBeReceiver" class="btn btn-secondary btn-big">
+        <span class="btn-title">Listen</span>
+        <span class="btn-note">Keep this phone with you</span>
+      </button>
+    </div>
+
+    <p class="fineprint">
+      Audio travels directly between the two phones and is encrypted end to end.
+      Nothing is recorded and no audio passes through any server.
+    </p>
+    <p id="landingWarn" class="banner banner-warn hidden"></p>
+  </section>
+
+
+  <!-- ─────────────────────────  MONITOR  ───────────────────────── -->
+  <section id="view-monitor" class="view">
+
+    <!-- setup -->
+    <div id="monSetup" class="pane">
+      <button class="link-back" data-back>← Back</button>
+      <h2>Monitor phone</h2>
+
+      <div class="field">
+        <span class="label">How should the other phone connect?</span>
+        <div class="segmented" id="monMode">
+          <button class="seg is-active" data-mode="passphrase">Passphrase</button>
+          <button class="seg" data-mode="link">Share a link</button>
+        </div>
+        <p class="hint" data-hint-for="passphrase">Type the same passphrase on both phones. Easiest option — needs internet to make the connection.</p>
+        <p class="hint hidden" data-hint-for="link">Send an invite link over WhatsApp or iMessage. No third-party server involved, but takes two steps.</p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="monPass">Passphrase</label>
+        <div class="row">
+          <input id="monPass" class="input" type="text" autocomplete="off" autocapitalize="none"
+                 autocorrect="off" spellcheck="false" placeholder="e.g. quiet-otter-4821">
+          <button id="monGen" class="btn btn-ghost btn-inline" title="Generate a strong passphrase">Generate</button>
+        </div>
+        <p class="hint">Anyone who knows this can listen in, so pick something no one would guess.</p>
+      </div>
+
+      <button id="monStart" class="btn btn-primary btn-big">Start Monitoring</button>
+      <p id="monSetupErr" class="banner banner-error hidden"></p>
+    </div>
+
+    <!-- waiting: passphrase mode -->
+    <div id="monWaitPass" class="pane hidden">
+      <button class="link-back" data-stop>← Stop</button>
+      <h2>Waiting for a listener</h2>
+      <div class="spinner"></div>
+      <p class="lead">On the other phone, open this page, tap <strong>Listen</strong> and enter:</p>
+      <div class="codebox"><code id="monPassEcho"></code></div>
+      <p class="hint">Keep this screen open. You can lock nothing — the phone must stay awake and unlocked for the microphone to keep running.</p>
+      <p id="monWaitErr" class="banner banner-error hidden"></p>
+    </div>
+
+    <!-- waiting: link mode -->
+    <div id="monWaitLink" class="pane hidden">
+      <button class="link-back" data-stop>← Stop</button>
+      <h2>Step 1 — send the invite</h2>
+      <p class="lead">Send this link to the listening phone, then tell them the passphrase separately.</p>
+      <div class="row">
+        <button id="monShare" class="btn btn-primary">Share link</button>
+        <button id="monCopy" class="btn btn-ghost">Copy</button>
+      </div>
+      <details class="details">
+        <summary>Show the link</summary>
+        <textarea id="monInviteText" class="textarea" readonly rows="4"></textarea>
+      </details>
+
+      <h2 class="mt">Step 2 — paste their reply</h2>
+      <p class="lead">The other phone will send back a reply link. Open it on this phone and it should connect
+        automatically. If it doesn't, paste the reply code here.</p>
+      <textarea id="monAnswerInput" class="textarea" rows="3" placeholder="Paste the reply link or code"
+                autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"></textarea>
+      <button id="monAnswerGo" class="btn btn-primary">Connect</button>
+      <p id="monLinkErr" class="banner banner-error hidden"></p>
+    </div>
+
+    <!-- active -->
+    <div id="monActive" class="pane pane-active hidden">
+      <div class="active-top">
+        <div id="monDot" class="dot"></div>
+        <div>
+          <div id="monStatus" class="status-line">Monitoring</div>
+          <div id="monSince" class="status-sub"></div>
+        </div>
+      </div>
+      <div class="active-mid">
+        <div class="mic-glyph">🎙️</div>
+        <div id="monListeners" class="listeners">No one listening yet</div>
+      </div>
+      <div class="active-bottom">
+        <p id="monWakeWarn" class="banner banner-warn hidden"></p>
+        <p class="hint center">Screen stays on so the microphone keeps running. Keep this page in front and plug the phone in.</p>
+        <button id="monStop" class="btn btn-danger btn-big">Stop Monitoring</button>
+      </div>
+      <div id="monDim" class="dim-overlay hidden">
+        <div class="dim-inner">
+          <div id="monDimDot" class="dot"></div>
+          <div id="monDimStatus" class="dim-status">Monitoring</div>
+          <div class="dim-hint">Tap to show controls</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ─────────────────────────  RECEIVER  ───────────────────────── -->
+  <section id="view-receiver" class="view">
+
+    <div id="recSetup" class="pane">
+      <button class="link-back" data-back>← Back</button>
+      <h2>Listening phone</h2>
+
+      <div class="field">
+        <span class="label">How are you connecting?</span>
+        <div class="segmented" id="recMode">
+          <button class="seg is-active" data-mode="passphrase">Passphrase</button>
+          <button class="seg" data-mode="link">I have a link</button>
+        </div>
+        <p class="hint hidden" data-hint-for="link">Open the invite link the monitor phone sent you, then enter the passphrase.</p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="recPass">Passphrase</label>
+        <input id="recPass" class="input" type="text" autocomplete="off" autocapitalize="none"
+               autocorrect="off" spellcheck="false" placeholder="The passphrase from the monitor phone">
+      </div>
+
+      <div id="recLinkField" class="field hidden">
+        <label class="label" for="recInviteInput">Invite link</label>
+        <textarea id="recInviteInput" class="textarea" rows="3" placeholder="Paste the invite link"
+                  autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"></textarea>
+      </div>
+
+      <button id="recStart" class="btn btn-primary btn-big">Connect</button>
+      <p id="recSetupErr" class="banner banner-error hidden"></p>
+    </div>
+
+    <!-- link mode: hand the reply back -->
+    <div id="recReply" class="pane hidden">
+      <button class="link-back" data-stop>← Stop</button>
+      <h2>Send this back</h2>
+      <p class="lead">Send this reply link to the monitor phone. Once they open it, you'll be connected.</p>
+      <div class="row">
+        <button id="recShare" class="btn btn-primary">Share reply</button>
+        <button id="recCopy" class="btn btn-ghost">Copy</button>
+      </div>
+      <details class="details">
+        <summary>Show the reply link</summary>
+        <textarea id="recReplyText" class="textarea" readonly rows="4"></textarea>
+      </details>
+      <div class="waiting-row"><div class="spinner spinner-sm"></div><span>Waiting for the monitor phone…</span></div>
+    </div>
+
+    <div id="recActive" class="pane pane-active hidden">
+      <div class="active-top">
+        <div id="recDot" class="dot"></div>
+        <div>
+          <div id="recStatus" class="status-line">Connecting…</div>
+          <div id="recSince" class="status-sub"></div>
+        </div>
+      </div>
+      <div class="active-mid">
+        <div id="recGlyph" class="mic-glyph">🔊</div>
+        <button id="recUnmute" class="btn btn-primary hidden">Tap to start audio</button>
+      </div>
+      <div class="active-bottom">
+        <p class="hint center">Use the phone's volume buttons to adjust. You'll hear an alarm if the connection drops.</p>
+        <button id="recStop" class="btn btn-danger btn-big">Disconnect</button>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ────────────────  RETURN (monitor opens reply link)  ──────────────── -->
+  <section id="view-return" class="view">
+    <div class="pane">
+      <h2 id="retTitle">Connecting…</h2>
+      <div id="retSpin" class="spinner"></div>
+      <p id="retMsg" class="lead">Handing the reply back to your monitoring screen.</p>
+      <details class="details" id="retFallback">
+        <summary>It didn't connect automatically</summary>
+        <p class="hint">Copy this code and paste it into the <strong>Step 2</strong> box on the monitoring screen.</p>
+        <textarea id="retCode" class="textarea" readonly rows="4"></textarea>
+        <button id="retCopy" class="btn btn-ghost">Copy code</button>
+      </details>
+    </div>
+  </section>
+
+</div>
+
+<audio id="remoteAudio" autoplay playsinline></audio>
+
+<script src="vendor/peerjs.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
