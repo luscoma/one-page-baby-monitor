@@ -1,0 +1,88 @@
+/* Shared layout for the two "running" screens: status at the top, glyph in the middle,
+   controls pinned to the bottom. */
+
+.pane {
+  position: relative;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+.mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.status {
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.sub {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.glyph {
+  font-size: 64px;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.glyphLost {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+
+.listeners {
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+/* Near-black overlay so the phone can sit in a dark nursery without lighting up the room. */
+.dim {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border: 0;
+  padding: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+.dimInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  opacity: 0.3;
+}
+
+.dimStatus {
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+.dimHint {
+  font-size: 12px;
+  color: var(--text-dim);
+  opacity: 0.6;
+}

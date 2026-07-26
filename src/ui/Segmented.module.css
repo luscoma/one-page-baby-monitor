@@ -1,0 +1,29 @@
+.segmented {
+  display: flex;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+
+.seg {
+  flex: 1;
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-dim);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.active {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+}
