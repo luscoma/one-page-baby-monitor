@@ -25,6 +25,13 @@ class WakeLockManager {
       this.sentinel = await navigator.wakeLock.request('screen');
       this.sentinel.addEventListener('release', () => {
         this.sentinel = null;
+        // The system can drop the lock while the page is still in front (Android battery
+        // saver, a brief permission sheet). Ask again rather than letting the screen sleep.
+        if (this.wanted) {
+          setTimeout(() => {
+            if (this.wanted && document.visibilityState === 'visible') void this.acquire();
+          }, 1000);
+        }
       });
       return true;
     } catch {

@@ -79,6 +79,9 @@ export class MonitorSession extends Store<MonitorSnapshot> {
     this.running = true;
     this.patch({ mode, passphrase, notice: '', inviteLink: null, listeners: 0 });
 
+    // Take the lock now, inside the Start tap, not once a listener joins: the phone has to
+    // stay awake through the waiting and invite screens too, or the mic dies before anyone hears it.
+    void wakeLock.acquire();
     this.stream = await getMicStream();
     localStorage.setItem('bm:lastPass', passphrase);
 
