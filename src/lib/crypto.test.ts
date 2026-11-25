@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { authProof, peerIdFor, seal, unseal } from './crypto';
+import { b64urlDecode, b64urlEncode } from './encoding';
 import type { SignalPayload } from '../types';
 
 const PASS = 'quiet-otter-4821';
@@ -74,10 +75,11 @@ describe('seal / unseal', () => {
   });
 
   it('refuses a tampered ciphertext', async () => {
-    const blob = await seal(payload, PASS);
-    // Flip a character near the end, inside the ciphertext rather than the header.
-    const last = blob.at(-1) === 'A' ? 'B' : 'A';
-    await expect(unseal(blob.slice(0, -1) + last, PASS)).rejects.toThrow();
+    const bytes = b64urlDecode(await seal(payload, PASS));
+    // Flip a whole byte at the end, inside the ciphertext rather than the header. Editing the
+    // last base64 character instead is flaky: it can carry padding bits that decode to nothing.
+    bytes[bytes.length - 1] ^= 0xff;
+    await expect(unseal(b64urlEncode(bytes), PASS)).rejects.toThrow();
   });
 
   it('rejects something that is not a sealed blob at all', async () => {
