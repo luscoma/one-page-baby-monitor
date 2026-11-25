@@ -16,9 +16,13 @@ const AUTH_TIMEOUT = 20_000;
 const DIM_AFTER = 25_000;
 const MAX_RECLAIM_ATTEMPTS = 8;
 
-const NO_WAKE_LOCK_NOTICE =
-  'This browser will not keep the screen on by itself. Set Auto-Lock to Never '
-  + '(iPhone: Settings → Display & Brightness) or the microphone will stop when the screen sleeps.';
+const WAKE_LOCK_NOTICE_PREFIX = 'This phone would not keep the screen on';
+
+function noWakeLockNotice(reason: string): string {
+  return `${WAKE_LOCK_NOTICE_PREFIX}${reason ? ` (${reason})` : ''}. Tap the screen to try again. `
+    + 'If this stays up, set Auto-Lock to Never (iPhone: Settings → Display & Brightness) or the '
+    + 'microphone will stop when the screen sleeps.';
+}
 
 interface ListenerSession {
   conn: DataConnection;
@@ -68,6 +72,7 @@ export class MonitorSession extends Store<MonitorSnapshot> {
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private dimTimer: ReturnType<typeof setTimeout> | null = null;
   private reclaimTimer: ReturnType<typeof setTimeout> | null = null;
+  private stopWakeWatch: (() => void) | null = null;
 
   constructor() {
     super(INITIAL);
@@ -299,13 +304,25 @@ export class MonitorSession extends Store<MonitorSnapshot> {
 
     this.patch({ phase: 'active', startedAt: Date.now(), notice: '', dimmed: false });
 
-    void wakeLock.acquire().then((held) => {
-      if (!held) this.patch({ notice: NO_WAKE_LOCK_NOTICE });
-    });
+    this.stopWakeWatch?.();
+    this.stopWakeWatch = wakeLock.onChange((held) => this.showWakeLockState(held));
+    void wakeLock.acquire().then((held) => this.showWakeLockState(held));
 
     this.refreshListeners();
     this.pingTimer = setInterval(() => this.sendPing(), PING_INTERVAL);
     this.scheduleDim();
+  }
+
+  /** Shows the wake-lock warning when a request fails and clears it once a retry succeeds. */
+  private showWakeLockState(held: boolean): void {
+    if (this.state.phase !== 'active') return;
+    const showing = this.state.notice.startsWith(WAKE_LOCK_NOTICE_PREFIX);
+    if (held) {
+      if (showing) this.patch({ notice: '' });
+    } else if (wakeLock.lastError || !wakeLock.supported) {
+      // A plain release (page backgrounded) leaves lastError empty and is retaken on return.
+      this.patch({ notice: noWakeLockNotice(wakeLock.lastError) });
+    }
   }
 
   /**
@@ -396,6 +413,8 @@ export class MonitorSession extends Store<MonitorSnapshot> {
 
     this.stream?.getTracks().forEach((track) => track.stop());
     this.stream = null;
+    this.stopWakeWatch?.();
+    this.stopWakeWatch = null;
     wakeLock.release();
 
     this.patch({ ...INITIAL, passphrase: this.state.passphrase, mode: this.state.mode });
